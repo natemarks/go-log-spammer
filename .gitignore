@@ -8,3 +8,5 @@ vendor/
 *.out
 *.iml
 *.tar.gz
+log-spammer
+spammer.log

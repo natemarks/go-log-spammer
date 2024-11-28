@@ -20,18 +20,16 @@ help: ## Show this help.
 	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
 
 ${EXECUTABLES}:
+	-rm -rf build
 	@for o in $(GOOS); do \
 	  for a in $(GOARCH); do \
-        echo "$(COMMIT)/$${o}/$${a}" ; \
-        mkdir -p build/$(COMMIT)/$${o}/$${a} ; \
+        mkdir -p build/$${o}/$${a} ; \
         env GOOS=$${o} GOARCH=$${a} \
-        go build  -v -o build/$(COMMIT)/$${o}/$${a}/$@ ${PKG}/cmd/$@; \
+        go build  -v -o build/$${o}/$${a}/$@ ${PKG}/cmd/$@; \
 	  done \
     done ; \
 
 build: git-status ${EXECUTABLES}
-	rm -f build/current
-	ln -s $(CDIR)/build/$(COMMIT) $(CDIR)/build/current
 
 release: git-status build
 	mkdir -p release/$(COMMIT)
@@ -85,5 +83,13 @@ git-status: ## require status is clean so we can use undo_edits to put things ba
 		echo "Error - working directory is dirty. Commit those changes!"; \
 		exit 1; \
 	fi
+
+docker-build:  git-status  build ## build docker images
+	docker build --no-cache -t log-spammer:$(COMMIT) -t log-spammer:latest .; \
+
+docker-rm: ## remove all docker images
+	ids=$$(docker images log-spammer -a -q); \
+	echo "Image IDs: $${ids}"; \
+	docker rmi -f $${ids}; \
 
 .PHONY: build release static vet lint fmt gocyclo goimports test
